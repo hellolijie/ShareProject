@@ -16,16 +16,17 @@ import io.netty.channel.ChannelHandlerContext;
 
 public class TcpClientExecutor {
     private TcpClient tcpClient;
-    private Map<String, RequestCallback> callbackMap;
+
+    private RequestManager requestManager;
     private TcpClientChannelInboundHandler tcpClientChannelInboundHandler;
     private PushListener pushListener;
     private ConnectionStateListener connectionStateListener;
 
     public TcpClientExecutor(){
+        requestManager = new RequestManager();
         tcpClientChannelInboundHandler = new TcpClientChannelInboundHandler();
 
         tcpClient = new TcpClient(tcpClientChannelInboundHandler);
-        callbackMap = new HashMap<>();
 
         tcpClientChannelInboundHandler.setConnectionListener(new TcpClientChannelInboundHandler.ConnectionListener() {
             @Override
@@ -35,7 +36,7 @@ public class TcpClientExecutor {
                         connectionStateListener.onConnect(channelContext);
                     }
                     else if (state == TcpClientChannelInboundHandler.STATE_INACTIVE){
-                        connectionStateListener.onDisnect(channelContext);
+                        connectionStateListener.onDisconnect(channelContext);
                     }
                     else if (state == TcpClientChannelInboundHandler.STATE_TIME_OVER){
                         connectionStateListener.onTimeOver(channelContext);
@@ -50,7 +51,7 @@ public class TcpClientExecutor {
 
                     switch (transmissionModel.transmissionType){
                         case TransmissionModel.TYPE_REQUEST:    //请求
-                            handleRequest(transmissionModel);
+                            requestManager.handleRequest(transmissionModel);
                             break;
                         case TransmissionModel.TYPE_PUSH:       //推送
                             handlePush(transmissionModel);
@@ -67,17 +68,7 @@ public class TcpClientExecutor {
         
     }
 
-    /**
-     * 处理请求返回
-     * @param transmissionModel
-     */
-    private void handleRequest(TransmissionModel transmissionModel){
-        RequestCallback requestCallback = callbackMap.get(transmissionModel.transmissionIdentification);
-        if (requestCallback != null){
-            requestCallback.onSuc(transmissionModel);
-        }
-        callbackMap.remove(requestCallback);
-    }
+
 
     /**
      * 处理推送
@@ -97,6 +88,7 @@ public class TcpClientExecutor {
     public void connect(String host, int port){
         try {
             tcpClient.connect(host, port);
+            requestManager.startTimeOverCheck();
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -107,6 +99,7 @@ public class TcpClientExecutor {
      */
     public void shutdown(){
         tcpClient.shutdown();
+        requestManager.endTimeOverCheck();
     }
 
     /**
@@ -114,14 +107,25 @@ public class TcpClientExecutor {
      * @param msg
      * @param requestCallback
      */
-    public void sendMsg(String msg, RequestCallback requestCallback){
+    public void sendMsg(String msg, RequestManager.RequestCallback requestCallback){
+        sendMsg(msg, requestCallback, 0);
+    }
+
+    /**
+     * 发送消息到服务端
+     * @param msg
+     * @param requestCallback
+     */
+    public void sendMsg(String msg, RequestManager.RequestCallback requestCallback, int timeOverMilliseconds){
         TransmissionModel transmissionModel = new TransmissionModel();
         transmissionModel.transmissionContent = msg;
         transmissionModel.transmissionType = TransmissionModel.TYPE_REQUEST;
         transmissionModel.transmissionIdentification = createIdentification();
 
         requestCallback.requestCreateTime = System.currentTimeMillis();
-        callbackMap.put(transmissionModel.transmissionIdentification, requestCallback);
+        requestCallback.timeOverMilliseconds = timeOverMilliseconds;
+
+        requestManager.putRequest(transmissionModel.transmissionIdentification, requestCallback);
         tcpClient.sendMsg(new Gson().toJson(transmissionModel));
     }
 
@@ -150,16 +154,6 @@ public class TcpClientExecutor {
     }
 
     /**
-     * 请求回调
-     */
-    public abstract class RequestCallback {
-        public long requestCreateTime;
-
-        abstract void onSuc(TransmissionModel transmissionModel);
-        abstract void onError(ErrorModel errorModel);
-    }
-
-    /**
      * 推送监听器
      */
     public interface PushListener {
@@ -170,7 +164,7 @@ public class TcpClientExecutor {
      * 状态回调
      */
     public interface ConnectionStateListener {
-        void onDisnect(ChannelHandlerContext channelContext);
+        void onDisconnect(ChannelHandlerContext channelContext);
         void onConnect(ChannelHandlerContext channelContext);
         void onTimeOver(ChannelHandlerContext channelContext);
     }
