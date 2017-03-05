@@ -33,13 +33,12 @@ public class TcpServerExecutor {
 
                     TransmissionModel transmissionModel = gson.fromJson(msg, TransmissionModel.class);
                     TransmissionModel backTransmissionModel = null;
+                    backTransmissionModel = new TransmissionModel();
+                    backTransmissionModel.transmissionIdentification = transmissionModel.transmissionIdentification;
+                    backTransmissionModel.transmissionType = TransmissionModel.TYPE_REQUEST;
                     if (onHandelReceivedData != null){
-                        backTransmissionModel = onHandelReceivedData.onReceivedData(transmissionModel);
-                    }
-
-                    if (backTransmissionModel == null){
-                        backTransmissionModel = new TransmissionModel();
-                        backTransmissionModel.transmissionType = TransmissionModel.TYPE_REQUEST;
+                        String backString = onHandelReceivedData.onReceivedData(transmissionModel.transmissionContent);
+                        backTransmissionModel.transmissionContent = backString;
                     }
 
                     channelContext.writeAndFlush(gson.toJson(backTransmissionModel));
@@ -92,9 +91,9 @@ public class TcpServerExecutor {
     public interface OnHandelReceivedData{
         /**
          * 处理接收到客户端数据接口
-         * @param transmissionModel  返回给客户端的数据
+         * @param msgContent  返回给客户端的数据
          * @return
          */
-        TransmissionModel onReceivedData(TransmissionModel transmissionModel);
+        String onReceivedData(String msgContent);
     }
 }
