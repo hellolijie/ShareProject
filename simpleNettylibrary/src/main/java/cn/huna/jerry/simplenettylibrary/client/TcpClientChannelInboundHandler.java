@@ -15,7 +15,7 @@ import io.netty.handler.timeout.IdleStateEvent;
  */
 
 public class TcpClientChannelInboundHandler extends SimpleChannelInboundHandler<String> {
-    private static final String TAG = "TcpServerInboundHandler";
+    private static final String TAG = "TcpClientInboundHandler";
     public static final int STATE_REGISTERED = 0;
     public static final int STATE_UNREGISTERED = 1;
     public static final int STATE_ACTIVE = 2;

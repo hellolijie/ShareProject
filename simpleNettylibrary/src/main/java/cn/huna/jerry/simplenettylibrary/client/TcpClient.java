@@ -43,31 +43,41 @@ public class TcpClient {
      * @param port
      * @throws InterruptedException
      */
-    public void connect(String host, int port) throws InterruptedException {
-        workerGroup = new NioEventLoopGroup();
-        Bootstrap b = new Bootstrap();
-        b.group(workerGroup);
-        b.channel(NioSocketChannel.class);
+    public void connect(final String host, final int port) throws InterruptedException {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                workerGroup = new NioEventLoopGroup();
+                Bootstrap b = new Bootstrap();
+                b.group(workerGroup);
+                b.channel(NioSocketChannel.class);
 //            b.option(ChannelOption.AUTO_READ, false);
 
-        b.handler(new ChannelInitializer<SocketChannel>() {
-            @Override
-            public void initChannel(SocketChannel ch) throws Exception {
-                ChannelPipeline pipeline = ch.pipeline();
-                pipeline.addLast("frameDecoder", new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4, 0, 4));
-                pipeline.addLast("frameEncoder", new LengthFieldPrepender(4));
-                pipeline.addLast("decoder", new StringDecoder(CharsetUtil.UTF_8));
-                pipeline.addLast("encoder", new StringEncoder(CharsetUtil.UTF_8));
+                b.handler(new ChannelInitializer<SocketChannel>() {
+                    @Override
+                    public void initChannel(SocketChannel ch) throws Exception {
+                        ChannelPipeline pipeline = ch.pipeline();
+                        pipeline.addLast("frameDecoder", new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4, 0, 4));
+                        pipeline.addLast("frameEncoder", new LengthFieldPrepender(4));
+                        pipeline.addLast("decoder", new StringDecoder(CharsetUtil.UTF_8));
+                        pipeline.addLast("encoder", new StringEncoder(CharsetUtil.UTF_8));
 
-                pipeline.addLast("ping", new IdleStateHandler(WRITE_WAIT_SECONDS, WRITE_WAIT_SECONDS, WRITE_WAIT_SECONDS, TimeUnit.SECONDS));
+                        pipeline.addLast("ping", new IdleStateHandler(WRITE_WAIT_SECONDS, WRITE_WAIT_SECONDS, WRITE_WAIT_SECONDS, TimeUnit.SECONDS));
 
-                pipeline.addLast("handler", channelHandler);
+                        pipeline.addLast("handler", channelHandler);
+                    }
+                });
+
+                // Start the client.
+
+                try {
+                    channel = b.connect(host, port).sync().channel();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
-        });
+        }).start();
 
-        // Start the client.
-
-        channel = b.connect(host, port).sync().channel();
     }
 
     /**

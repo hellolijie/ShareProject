@@ -2,9 +2,6 @@ package cn.huna.jerry.simplenettylibrary.client;
 
 import com.google.gson.Gson;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import cn.huna.jerry.simplenettylibrary.Utils;
 import cn.huna.jerry.simplenettylibrary.model.ErrorModel;
 import cn.huna.jerry.simplenettylibrary.model.TransmissionModel;
@@ -15,12 +12,18 @@ import io.netty.channel.ChannelHandlerContext;
  */
 
 public class TcpClientExecutor {
+    public static final int CONNECT_STATE_CONNECT = 1;       //连接成功
+    public static final int CONNECT_STATE_DISCONNECT = -1;       //连接断开
+    public static final int CONNECT_STATE_TIMEOUT = -2;     //连接超时
+
     private TcpClient tcpClient;
 
     private RequestManager requestManager;
     private TcpClientChannelInboundHandler tcpClientChannelInboundHandler;
     private PushListener pushListener;
     private ConnectionStateListener connectionStateListener;
+
+    private int connectState = -1;
 
     public TcpClientExecutor(){
         requestManager = new RequestManager();
@@ -34,12 +37,18 @@ public class TcpClientExecutor {
                 if (connectionStateListener != null){
                     if (state == TcpClientChannelInboundHandler.STATE_ACTIVE){
                         connectionStateListener.onConnect(channelContext);
+                        connectState = CONNECT_STATE_CONNECT;
                     }
                     else if (state == TcpClientChannelInboundHandler.STATE_INACTIVE){
                         connectionStateListener.onDisconnect(channelContext);
+                        connectState = CONNECT_STATE_DISCONNECT;
                     }
                     else if (state == TcpClientChannelInboundHandler.STATE_TIME_OVER){
                         connectionStateListener.onTimeOver(channelContext);
+                        connectState = CONNECT_STATE_TIMEOUT;
+                    }
+                    else if (state == TcpClientChannelInboundHandler.STATE_READ_COMPLETE){
+                        connectState = CONNECT_STATE_CONNECT;
                     }
                 }
             }
@@ -64,19 +73,13 @@ public class TcpClientExecutor {
         });
     }
 
-    private void timeOver(){
-        
-    }
-
-
-
     /**
      * 处理推送
      * @param transmissionModel
      */
     private void handlePush(TransmissionModel transmissionModel){
         if (pushListener != null){
-            pushListener.onPushMessage(transmissionModel);
+            pushListener.onPushMessage(transmissionModel.transmissionContent);
         }
     }
 
@@ -117,6 +120,12 @@ public class TcpClientExecutor {
      * @param requestCallback
      */
     public void sendMsg(String msg, RequestManager.RequestCallback requestCallback, int timeOverMilliseconds){
+
+        if (connectState != CONNECT_STATE_CONNECT){
+            requestCallback.onError(ErrorModel.newModel(ErrorModel.ERROR_CONNECT_DISCONNECT, "连接已断开"));
+            return;
+        }
+
         TransmissionModel transmissionModel = new TransmissionModel();
         transmissionModel.transmissionContent = msg;
         transmissionModel.transmissionType = TransmissionModel.TYPE_REQUEST;
@@ -125,7 +134,7 @@ public class TcpClientExecutor {
         requestCallback.requestCreateTime = System.currentTimeMillis();
         requestCallback.timeOverMilliseconds = timeOverMilliseconds;
 
-        requestManager.putRequest(transmissionModel.transmissionIdentification, requestCallback);
+        requestManager.putRequest(transmissionModel, requestCallback);
         tcpClient.sendMsg(new Gson().toJson(transmissionModel));
     }
 
@@ -157,7 +166,7 @@ public class TcpClientExecutor {
      * 推送监听器
      */
     public interface PushListener {
-        void onPushMessage(TransmissionModel transmissionModel);
+        void onPushMessage(String pushContent);
     }
 
     /**

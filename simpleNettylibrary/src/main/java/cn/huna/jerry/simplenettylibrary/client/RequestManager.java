@@ -7,6 +7,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import cn.huna.jerry.simplenettylibrary.Utils;
 import cn.huna.jerry.simplenettylibrary.model.ErrorModel;
 import cn.huna.jerry.simplenettylibrary.model.TransmissionModel;
 
@@ -16,7 +17,7 @@ import cn.huna.jerry.simplenettylibrary.model.TransmissionModel;
 
 public class RequestManager {
     private static final int TIME_OVER_CHECK_DELAY = 3;     //超时轮询时间
-    private static final int DEFAULT_TIME_OVER_MILLISECOND = 1000;  //默认超时时间
+    private static final int DEFAULT_TIME_OVER_MILLISECOND = 10000;  //默认超时时间
 
     private ScheduledExecutorService timeOverService;
     private ConcurrentHashMap<String, RequestCallback> callbackMap;
@@ -27,12 +28,12 @@ public class RequestManager {
 
     /**
      * 添加请求
-     * @param key
      * @param requestCallback
      */
-    public void putRequest(String key, RequestCallback requestCallback){
+    public void putRequest(TransmissionModel transmissionModel, RequestCallback requestCallback){
         requestCallback.requestCreateTime = System.currentTimeMillis();
-        callbackMap.put(key, requestCallback);
+        requestCallback.requestKey = transmissionModel.transmissionIdentification;
+        callbackMap.put(requestCallback.requestKey, requestCallback);
     }
 
     /**
@@ -42,16 +43,17 @@ public class RequestManager {
     public void handleRequest(TransmissionModel transmissionModel){
         RequestManager.RequestCallback requestCallback = callbackMap.get(transmissionModel.transmissionIdentification);
         if (requestCallback != null){
-            requestCallback.onSuc(transmissionModel);
+            requestCallback.onSuc(transmissionModel.transmissionContent);
         }
-        callbackMap.remove(requestCallback);
+        callbackMap.remove(requestCallback.requestKey);
     }
 
     /**
      * 开启超时检查
      */
     public void startTimeOverCheck(){
-        timeOverService.shutdownNow();
+        if (timeOverService != null)
+            timeOverService.shutdownNow();
 
         timeOverService = Executors.newSingleThreadScheduledExecutor();
         // 第二个参数为首次执行的延时时间，第三个参数为定时执行的间隔时间
@@ -63,16 +65,20 @@ public class RequestManager {
                     if (requestCallback.timeOverMilliseconds > 0){
                         if (System.currentTimeMillis() > requestCallback.requestCreateTime + requestCallback.timeOverMilliseconds){
                             //请求设置了超时时间 超时
+                            callbackMap.remove(requestCallback.requestKey);
+                            requestCallback.onError(ErrorModel.newModel(ErrorModel.ERROR_TIME_OUT, "请求超时"));
                         }
                     }
                     else {
                         if (System.currentTimeMillis() > requestCallback.requestCreateTime + DEFAULT_TIME_OVER_MILLISECOND){
                             //默认超时时间 超时
+                            callbackMap.remove(requestCallback.requestKey);
+                            requestCallback.onError(ErrorModel.newModel(ErrorModel.ERROR_TIME_OUT, "请求超时"));
                         }
                     }
                 }
             }
-        }, 10, 1, TimeUnit.SECONDS);
+        }, TIME_OVER_CHECK_DELAY, TIME_OVER_CHECK_DELAY, TimeUnit.SECONDS);
     }
 
     /**
@@ -82,15 +88,15 @@ public class RequestManager {
         timeOverService.shutdownNow();
     }
 
-
     /**
      * 请求回调
      */
-    public abstract class RequestCallback {
+    public static abstract class RequestCallback {
         public long requestCreateTime;      //请求创建时间
-        public int timeOverMilliseconds;    //超时时间
+        public long timeOverMilliseconds;    //超时时间
+        public String requestKey;           //请求唯一标识
 
-        abstract void onSuc(TransmissionModel transmissionModel);
-        abstract void onError(ErrorModel errorModel);
+        public abstract void onSuc(String msgContent);
+        public abstract void onError(ErrorModel errorModel);
     }
 }

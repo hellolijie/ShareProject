@@ -39,35 +39,40 @@ public class TcpServer {
      * 会阻塞
      */
     public void run(final int port){
-        ServerBootstrap b = new ServerBootstrap();
-        b.group(bossGroup, workerGroup);
-        b.channel(NioServerSocketChannel.class);
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                ServerBootstrap b = new ServerBootstrap();
+                b.group(bossGroup, workerGroup);
+                b.channel(NioServerSocketChannel.class);
 //                b.option(ChannelOption.SO_BACKLOG, 100);
 //                b.option(ChannelOption.SO_REUSEADDR, true);
 //                b.handler(new LoggingHandler(LogLevel.INFO));
-        b.childHandler(new ChannelInitializer<SocketChannel>() {
-            @Override
-            public void initChannel(SocketChannel ch) throws Exception {
-                ChannelPipeline pipeline = ch.pipeline();
-                pipeline.addLast("frameDecoder", new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4, 0, 4));
-                pipeline.addLast("frameEncoder", new LengthFieldPrepender(4));
-                pipeline.addLast("decoder", new StringDecoder(CharsetUtil.UTF_8));
-                pipeline.addLast("encoder", new StringEncoder(CharsetUtil.UTF_8));
-                pipeline.addLast("pong", new IdleStateHandler(READ_WAIT_SECONDS, READ_WAIT_SECONDS, READ_WAIT_SECONDS, TimeUnit.SECONDS));
-                pipeline.addLast("handler", tcpServerInboundHandler);
+                b.childHandler(new ChannelInitializer<SocketChannel>() {
+                    @Override
+                    public void initChannel(SocketChannel ch) throws Exception {
+                        ChannelPipeline pipeline = ch.pipeline();
+                        pipeline.addLast("frameDecoder", new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4, 0, 4));
+                        pipeline.addLast("frameEncoder", new LengthFieldPrepender(4));
+                        pipeline.addLast("decoder", new StringDecoder(CharsetUtil.UTF_8));
+                        pipeline.addLast("encoder", new StringEncoder(CharsetUtil.UTF_8));
+                        pipeline.addLast("pong", new IdleStateHandler(READ_WAIT_SECONDS, READ_WAIT_SECONDS, READ_WAIT_SECONDS, TimeUnit.SECONDS));
+                        pipeline.addLast("handler", tcpServerInboundHandler);
+                    }
+
+                });
+
+                try {
+                    b.bind(port).sync().channel().closeFuture().sync();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                finally {
+                    shutdown();
+                }
             }
+        }).start();
 
-        });
-
-        try {
-            b.bind(port).sync().channel().closeFuture().sync();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        finally {
-            bossGroup.shutdownGracefully();
-            workerGroup.shutdownGracefully();
-        }
 
     }
 
