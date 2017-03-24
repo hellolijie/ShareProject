@@ -6,7 +6,7 @@
  * Vestibulum commodo. Ut rhoncus gravida arcu.
  */
 
-package com.example.test.commonlibrary.customWidget.utils;
+package com.example.test.commonlibrary.utils;
 
 import android.content.Context;
 import android.content.pm.PackageInfo;

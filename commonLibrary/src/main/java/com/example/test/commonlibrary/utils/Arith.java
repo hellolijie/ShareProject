@@ -1,4 +1,4 @@
-package com.example.test.commonlibrary.customWidget.utils;
+package com.example.test.commonlibrary.utils;
 
 /**
  * Created by lijie on 2016/9/20.

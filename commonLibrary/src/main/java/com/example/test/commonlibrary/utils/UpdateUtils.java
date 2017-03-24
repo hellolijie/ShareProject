@@ -1,4 +1,4 @@
-package com.example.test.commonlibrary.customWidget.utils;
+package com.example.test.commonlibrary.utils;
 
 import android.content.Context;
 import android.content.DialogInterface;

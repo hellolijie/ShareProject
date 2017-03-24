@@ -1,4 +1,4 @@
-package com.example.test.commonlibrary.customWidget.utils;
+package com.example.test.commonlibrary.utils;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
