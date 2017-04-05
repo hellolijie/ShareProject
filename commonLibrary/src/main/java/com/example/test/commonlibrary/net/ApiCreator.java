@@ -12,15 +12,10 @@ import retrofit2.converter.gson.GsonConverterFactory;
  */
 
 public class ApiCreator {
-    public static final String BASE_URL = "";
 
     private static OkHttpClient okHttpClient = new OkHttpClient();
     private static Converter.Factory gsonConverterFactory = GsonConverterFactory.create();
     private static CallAdapter.Factory rxJavaCallAdapterFactory = RxJavaCallAdapterFactory.create();
-
-    public static<T> T create(Class<T> classOfApi){
-        return create(classOfApi, BASE_URL);
-    }
 
     public static<T> T create(Class<T> classOfApi, String baseURl){
         Retrofit retrofit = new Retrofit.Builder()
