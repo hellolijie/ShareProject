@@ -22,7 +22,8 @@ public class NoteModel extends BaseModel {
     @Column(name = "tag_id")
     public String tagId;
 
-    @Column(name = "weight")
-    public int weight;
+    @Column(name = "play_count")
+    public int playCount;
+
 
 }
