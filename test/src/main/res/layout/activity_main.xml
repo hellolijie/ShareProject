@@ -62,4 +62,11 @@
         android:layout_height="wrap_content"
         android:onClick="sendMsg"
         android:text="发送数据"/>
+
+    <Button
+        android:id="@+id/btn_retrofit_test"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:onClick="retrofitTest"
+        android:text="retrofit测试"/>
 </LinearLayout>

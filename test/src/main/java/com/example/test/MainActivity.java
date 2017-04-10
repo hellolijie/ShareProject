@@ -140,9 +140,10 @@ public class MainActivity extends AppCompatActivity {
      * @param view
      */
     public void retrofitTest(View view){
-        ApiWrapper apiWrapper = ApiCreator.create(ApiWrapper.class, "https://www.baidu.com/");
+        ApiWrapper apiWrapper = ApiCreator.create(ApiWrapper.class, "http://api.fanyi.baidu.com/");
         apiWrapper
-                .testBaidu()
+//                .testBaidu()
+                .baiduTranslate("apple", "en", "zh", "2015063000000001", "1435660288", "f89f9594663708c1605f3d736d01d2d4")
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(new Action1<Response<String>>() {

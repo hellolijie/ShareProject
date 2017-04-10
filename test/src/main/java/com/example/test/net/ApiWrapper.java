@@ -18,4 +18,13 @@ public interface ApiWrapper {
 
     @GET("/")
     Observable<Response<String>> testBaidu();
+
+    @FormUrlEncoded
+    @POST("api/trans/vip/translate")
+    Observable<Response<String>> baiduTranslate(@Field("q") String q,
+                                                @Field("from") String from,
+                                                @Field("to") String to,
+                                                @Field("appid") String appid,
+                                                @Field("salt") String salt,
+                                                @Field("sign") String sign);
 }
