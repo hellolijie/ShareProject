@@ -9,12 +9,20 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.test.commonlibrary.net.ApiCreator;
+import com.example.test.net.ApiWrapper;
+
 import cn.huna.jerry.simplenettylibrary.client.RequestManager;
 import cn.huna.jerry.simplenettylibrary.client.TcpClientExecutor;
 import cn.huna.jerry.simplenettylibrary.model.ErrorModel;
 import cn.huna.jerry.simplenettylibrary.model.TransmissionModel;
 import cn.huna.jerry.simplenettylibrary.server.TcpServerExecutor;
 import io.netty.channel.ChannelHandlerContext;
+import retrofit2.Response;
+import rx.Scheduler;
+import rx.android.schedulers.AndroidSchedulers;
+import rx.functions.Action1;
+import rx.schedulers.Schedulers;
 
 public class MainActivity extends AppCompatActivity {
     private TcpServerExecutor tcpServerExecutor;
@@ -125,6 +133,30 @@ public class MainActivity extends AppCompatActivity {
                 printText("调用失败：" + errorModel.errorCode + "-" + errorModel.errorMessage  );
             }
         });
+    }
+
+    /**
+     * retrofit测试
+     * @param view
+     */
+    public void retrofitTest(View view){
+        ApiWrapper apiWrapper = ApiCreator.create(ApiWrapper.class, "https://www.baidu.com/");
+        apiWrapper
+                .testBaidu()
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Action1<Response<String>>() {
+                                 @Override
+                                 public void call(Response<String> stringResponse) {
+                                     Toast.makeText(MainActivity.this, stringResponse.body(), Toast.LENGTH_LONG).show();
+                                 }
+                             },
+                        new Action1<Throwable>() {
+                            @Override
+                            public void call(Throwable throwable) {
+                                Toast.makeText(MainActivity.this, throwable.getMessage(), Toast.LENGTH_LONG).show();
+                            }
+                        });
     }
 
     private void printText(final String text){
