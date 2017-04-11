@@ -6,8 +6,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
-import com.dykj.baselibrary.R;
-
+import com.example.test.commonlibrary.R;
 
 public class CustomDialog extends Dialog {
 	
