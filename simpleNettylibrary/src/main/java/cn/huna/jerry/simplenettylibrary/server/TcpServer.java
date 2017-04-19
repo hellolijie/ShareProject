@@ -24,14 +24,15 @@ public class TcpServer {
     // 设置10秒检测chanel是否接受过心跳数据
     private static final int READ_WAIT_SECONDS = 5;
 
-    private TcpServerInboundHandler tcpServerInboundHandler;
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
+    private TcpServerInboundHandler.ConnectionListener connectionListener;
 
-    public TcpServer(TcpServerInboundHandler tcpServerInboundHandler){
+
+    public TcpServer(TcpServerInboundHandler.ConnectionListener connectionListener){
         bossGroup = new NioEventLoopGroup();
         workerGroup = new NioEventLoopGroup();
-        this.tcpServerInboundHandler = tcpServerInboundHandler;
+        this.connectionListener = connectionListener;
     }
 
     /**
@@ -57,7 +58,7 @@ public class TcpServer {
                         pipeline.addLast("decoder", new StringDecoder(CharsetUtil.UTF_8));
                         pipeline.addLast("encoder", new StringEncoder(CharsetUtil.UTF_8));
                         pipeline.addLast("pong", new IdleStateHandler(READ_WAIT_SECONDS, READ_WAIT_SECONDS, READ_WAIT_SECONDS, TimeUnit.SECONDS));
-                        pipeline.addLast("handler", tcpServerInboundHandler);
+                        pipeline.addLast("handler", new TcpServerInboundHandler().setConnectionListener(connectionListener));
                     }
 
                 });
@@ -72,7 +73,6 @@ public class TcpServer {
                 }
             }
         }).start();
-
 
     }
 

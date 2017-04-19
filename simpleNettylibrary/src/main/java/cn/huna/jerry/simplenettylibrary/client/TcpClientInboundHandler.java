@@ -14,7 +14,7 @@ import io.netty.handler.timeout.IdleStateEvent;
  * Created by lijie on 17/1/25.
  */
 
-public class TcpClientChannelInboundHandler extends SimpleChannelInboundHandler<String> {
+public class TcpClientInboundHandler extends SimpleChannelInboundHandler<String> {
     private static final String TAG = "TcpClientInboundHandler";
     public static final int STATE_REGISTERED = 0;
     public static final int STATE_UNREGISTERED = 1;
@@ -41,7 +41,7 @@ public class TcpClientChannelInboundHandler extends SimpleChannelInboundHandler<
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
         super.channelRegistered(ctx);
-        Log.d(TAG, "channelRegistered: ");
+        Logger.d("channelRegistered: ");
         if (connectionListener != null){
             connectionListener.onStateChange(ctx, STATE_REGISTERED);
         }
@@ -50,7 +50,7 @@ public class TcpClientChannelInboundHandler extends SimpleChannelInboundHandler<
     @Override
     public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
         super.channelUnregistered(ctx);
-        Log.d(TAG, "channelUnregistered: ");
+        Logger.d("channelUnregistered: ");
         if (connectionListener != null){
             connectionListener.onStateChange(ctx, STATE_UNREGISTERED);
         }
@@ -59,7 +59,7 @@ public class TcpClientChannelInboundHandler extends SimpleChannelInboundHandler<
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         super.channelActive(ctx);
-        Log.d(TAG, "channelActive: ");
+        Logger.d("channelActive: ");
         if (connectionListener != null){
             connectionListener.onStateChange(ctx, STATE_ACTIVE);
         }
@@ -68,7 +68,7 @@ public class TcpClientChannelInboundHandler extends SimpleChannelInboundHandler<
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         super.channelInactive(ctx);
-        Log.d(TAG, "channelInactive: ");
+        Logger.d("channelInactive: ");
         if (connectionListener != null){
             connectionListener.onStateChange(ctx, STATE_INACTIVE);
         }
@@ -77,7 +77,7 @@ public class TcpClientChannelInboundHandler extends SimpleChannelInboundHandler<
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
         super.channelReadComplete(ctx);
-        Log.d(TAG, "channelReadComplete: ");
+        Logger.d("channelReadComplete: ");
         unRecPongTimes = 0;
         if (connectionListener != null){
             connectionListener.onStateChange(ctx, STATE_READ_COMPLETE);
@@ -116,13 +116,13 @@ public class TcpClientChannelInboundHandler extends SimpleChannelInboundHandler<
     @Override
     public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
         super.channelWritabilityChanged(ctx);
-        Log.d(TAG, "channelWritabilityChanged: ");
+        Logger.d( "channelWritabilityChanged: ");
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         super.exceptionCaught(ctx, cause);
-        Log.d(TAG, "exceptionCaught: ");
+        Logger.d("exceptionCaught: ");
     }
 
     @Override

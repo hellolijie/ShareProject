@@ -2,6 +2,8 @@ package cn.huna.jerry.simplenettylibrary.server;
 
 import android.util.Log;
 
+import com.orhanobut.logger.Logger;
+
 import cn.huna.jerry.simplenettylibrary.Constants;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -31,14 +33,15 @@ public class TcpServerInboundHandler extends SimpleChannelInboundHandler<String>
      * 设置 连接状态监听器
      * @param connectionListener
      */
-    public void setConnectionListener(ConnectionListener connectionListener){
+    public TcpServerInboundHandler setConnectionListener(ConnectionListener connectionListener){
         this.connectionListener = connectionListener;
+        return this;
     }
 
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
         super.channelRegistered(ctx);
-        Log.d(TAG, "channelRegistered: ");
+        Logger.d("channelRegistered: ");
         if (connectionListener != null){
             connectionListener.onStateChange(ctx, STATE_REGISTERED);
         }
@@ -47,7 +50,7 @@ public class TcpServerInboundHandler extends SimpleChannelInboundHandler<String>
     @Override
     public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
         super.channelUnregistered(ctx);
-        Log.d(TAG, "channelUnregistered: ");
+        Logger.d("channelUnregistered: ");
         if (connectionListener != null){
             connectionListener.onStateChange(ctx, STATE_UNREGISTERED);
         }
@@ -56,7 +59,7 @@ public class TcpServerInboundHandler extends SimpleChannelInboundHandler<String>
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         super.channelActive(ctx);
-        Log.d(TAG, "channelActive: ");
+        Logger.d("channelActive: ");
         if (connectionListener != null){
             connectionListener.onStateChange(ctx, STATE_ACTIVE);
         }
@@ -65,7 +68,7 @@ public class TcpServerInboundHandler extends SimpleChannelInboundHandler<String>
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         super.channelInactive(ctx);
-        Log.d(TAG, "channelInactive: ");
+        Logger.d("channelInactive: ");
         if (connectionListener != null){
             connectionListener.onStateChange(ctx, STATE_INACTIVE);
         }
@@ -76,7 +79,7 @@ public class TcpServerInboundHandler extends SimpleChannelInboundHandler<String>
         super.channelReadComplete(ctx);
         unRecPingTimes = 0;
 
-        Log.d(TAG, "channelReadComplete: ");
+        Logger.d("channelReadComplete: ");
         if (connectionListener != null){
             connectionListener.onStateChange(ctx, STATE_READ_COMPLETE);
         }
@@ -121,13 +124,13 @@ public class TcpServerInboundHandler extends SimpleChannelInboundHandler<String>
     @Override
     public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
         super.channelWritabilityChanged(ctx);
-        Log.d(TAG, "channelWritabilityChanged: ");
+        Logger.d("channelWritabilityChanged: ");
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         super.exceptionCaught(ctx, cause);
-        Log.d(TAG, "exceptionCaught: ");
+        Logger.d("exceptionCaught: ");
 
         ctx.close();
     }

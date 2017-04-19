@@ -9,6 +9,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -67,7 +68,7 @@ public class TcpClient {
                         pipeline.addLast("handler", channelHandler);
                     }
                 });
-
+                b.option(ChannelOption.SO_KEEPALIVE, true);
                 // Start the client.
 
                 try {
@@ -75,6 +76,9 @@ public class TcpClient {
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
+
+
+
             }
         }).start();
 
@@ -120,9 +124,9 @@ public class TcpClient {
         try {
             if(channel != null){
                 channel.close().awaitUninterruptibly();
-                workerGroup.shutdownGracefully();
-                Logger.d("channel close");
             }
+            workerGroup.shutdownGracefully();
+            Logger.d("channel close");
         }catch (Exception e){
             e.printStackTrace();
         }

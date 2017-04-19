@@ -19,7 +19,7 @@ public class TcpClientExecutor {
     private TcpClient tcpClient;
 
     private RequestManager requestManager;
-    private TcpClientChannelInboundHandler tcpClientChannelInboundHandler;
+    private TcpClientInboundHandler tcpClientInboundHandler;
     private PushListener pushListener;
     private ConnectionStateListener connectionStateListener;
 
@@ -27,27 +27,27 @@ public class TcpClientExecutor {
 
     public TcpClientExecutor(){
         requestManager = new RequestManager();
-        tcpClientChannelInboundHandler = new TcpClientChannelInboundHandler();
+        tcpClientInboundHandler = new TcpClientInboundHandler();
 
-        tcpClient = new TcpClient(tcpClientChannelInboundHandler);
+        tcpClient = new TcpClient(tcpClientInboundHandler);
 
-        tcpClientChannelInboundHandler.setConnectionListener(new TcpClientChannelInboundHandler.ConnectionListener() {
+        tcpClientInboundHandler.setConnectionListener(new TcpClientInboundHandler.ConnectionListener() {
             @Override
             public void onStateChange(ChannelHandlerContext channelContext, int state) {
                 if (connectionStateListener != null){
-                    if (state == TcpClientChannelInboundHandler.STATE_ACTIVE){
+                    if (state == TcpClientInboundHandler.STATE_ACTIVE){
                         connectionStateListener.onConnect(channelContext);
                         connectState = CONNECT_STATE_CONNECT;
                     }
-                    else if (state == TcpClientChannelInboundHandler.STATE_INACTIVE){
+                    else if (state == TcpClientInboundHandler.STATE_INACTIVE){
                         connectionStateListener.onDisconnect(channelContext);
                         connectState = CONNECT_STATE_DISCONNECT;
                     }
-                    else if (state == TcpClientChannelInboundHandler.STATE_TIME_OVER){
+                    else if (state == TcpClientInboundHandler.STATE_TIME_OVER){
                         connectionStateListener.onTimeOver(channelContext);
                         connectState = CONNECT_STATE_TIMEOUT;
                     }
-                    else if (state == TcpClientChannelInboundHandler.STATE_READ_COMPLETE){
+                    else if (state == TcpClientInboundHandler.STATE_READ_COMPLETE){
                         connectState = CONNECT_STATE_CONNECT;
                     }
                 }

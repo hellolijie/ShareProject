@@ -11,16 +11,12 @@ import io.netty.channel.ChannelHandlerContext;
 
 public class TcpServerExecutor {
     private TcpServer tcpServer;
-    private TcpServerInboundHandler tcpServerInboundHandler;
+//    private TcpServerInboundHandler tcpServerInboundHandler;
 
     private OnHandelReceivedData onHandelReceivedData;
 
     public TcpServerExecutor(){
-        tcpServerInboundHandler = new TcpServerInboundHandler();
-
-        tcpServer = new TcpServer(tcpServerInboundHandler);
-
-        tcpServerInboundHandler.setConnectionListener(new TcpServerInboundHandler.ConnectionListener() {
+        tcpServer = new TcpServer(new TcpServerInboundHandler.ConnectionListener() {
             @Override
             public void onStateChange(ChannelHandlerContext channelContext, int state) {
 
@@ -48,6 +44,7 @@ public class TcpServerExecutor {
                 }
             }
         });
+
     }
 
     /**
