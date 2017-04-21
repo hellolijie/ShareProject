@@ -34,8 +34,9 @@ public class TcpClientInboundHandler extends SimpleChannelInboundHandler<String>
      * 设置 连接状态监听器
      * @param connectionListener
      */
-    public void setConnectionListener(ConnectionListener connectionListener){
+    public TcpClientInboundHandler setConnectionListener(ConnectionListener connectionListener){
         this.connectionListener = connectionListener;
+        return this;
     }
 
     @Override
