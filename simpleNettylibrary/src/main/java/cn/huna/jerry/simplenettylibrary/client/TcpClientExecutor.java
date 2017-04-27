@@ -6,7 +6,6 @@ import cn.huna.jerry.simplenettylibrary.Utils;
 import cn.huna.jerry.simplenettylibrary.model.ErrorModel;
 import cn.huna.jerry.simplenettylibrary.model.TransmissionModel;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 
 /**
@@ -165,12 +164,4 @@ public class TcpClientExecutor {
         void onPushMessage(String pushContent);
     }
 
-    /**
-     * 状态回调
-     */
-    public interface ConnectionStateListener {
-        void onDisconnect(ChannelHandlerContext channelContext);
-        void onConnect(ChannelHandlerContext channelContext);
-        void onHeartBeatTimeOver(ChannelHandlerContext channelContext);
-    }
 }

@@ -42,7 +42,7 @@ public class SimpleNetty {
 //            b.option(ChannelOption.AUTO_READ, false);
     }
 
-    public synchronized SimpleNetty getInstance(){
+    public static synchronized SimpleNetty getInstance(){
         if (instance == null)
             instance = new SimpleNetty();
         return instance;
@@ -54,7 +54,7 @@ public class SimpleNetty {
      * @param port
      * @return
      */
-    public TcpClientExecutor connect(String host, int port){
+    public TcpClientExecutor connect(String host, int port, ConnectionStateListener connectionStateListener){
 
         final TcpClientInboundHandler tcpClientInboundHandler = new TcpClientInboundHandler();
         bootstrap.handler(new ChannelInitializer<SocketChannel>() {
@@ -76,7 +76,10 @@ public class SimpleNetty {
 
         Channel channel = bootstrap.connect(host, port).channel();
 
-        return new TcpClientExecutor(channel, tcpClientInboundHandler);
+        TcpClientExecutor tcpClientExecutor = new TcpClientExecutor(channel, tcpClientInboundHandler);
+        tcpClientExecutor.setConnectionStateListener(connectionStateListener);
+
+        return tcpClientExecutor;
 
     }
 
