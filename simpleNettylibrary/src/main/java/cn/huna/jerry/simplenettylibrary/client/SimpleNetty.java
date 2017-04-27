@@ -6,6 +6,7 @@ import java.util.concurrent.TimeUnit;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -74,9 +75,9 @@ public class SimpleNetty {
         bootstrap.option(ChannelOption.SO_KEEPALIVE, true);
         // Start the client.
 
-        Channel channel = bootstrap.connect(host, port).channel();
+        ChannelFuture channelFuture = bootstrap.connect(host, port);
 
-        TcpClientExecutor tcpClientExecutor = new TcpClientExecutor(channel, tcpClientInboundHandler);
+        TcpClientExecutor tcpClientExecutor = new TcpClientExecutor(channelFuture, tcpClientInboundHandler);
         tcpClientExecutor.setConnectionStateListener(connectionStateListener);
 
         return tcpClientExecutor;

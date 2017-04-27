@@ -6,6 +6,8 @@ import cn.huna.jerry.simplenettylibrary.Utils;
 import cn.huna.jerry.simplenettylibrary.model.ErrorModel;
 import cn.huna.jerry.simplenettylibrary.model.TransmissionModel;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 
 /**
@@ -15,9 +17,9 @@ import io.netty.channel.ChannelHandlerContext;
 public class TcpClientExecutor {
     public static final int CONNECT_STATE_CONNECT = 1;       //连接成功
     public static final int CONNECT_STATE_DISCONNECT = -1;       //连接断开
-    public static final int CONNECT_STATE_TIMEOUT = -2;     //连接超时
+    public static final int CONNECT_STATE_HEART_BEAT_TIMEOUT = -2;     //连接心跳超时
 
-//    private TcpClient tcpClient;
+    //    private TcpClient tcpClient;
     private Channel channel;
 
     private RequestManager requestManager;
@@ -27,30 +29,36 @@ public class TcpClientExecutor {
 
     private int connectState = -1;
 
-    public TcpClientExecutor(Channel channel, TcpClientInboundHandler tcpClientInboundHandler){
+    public TcpClientExecutor(ChannelFuture channelFuture, TcpClientInboundHandler tcpClientInboundHandler) {
         requestManager = new RequestManager();
         this.tcpClientInboundHandler = tcpClientInboundHandler;
-        this.channel = channel;
+        this.channel = channelFuture.channel();
 
-//        tcpClient = new TcpClient(tcpClientInboundHandler);
+        channelFuture.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture channelFuture) throws Exception {
+                if (channelFuture.isSuccess()){
+                    connectionStateListener.onConnect();
+                    connectState = CONNECT_STATE_CONNECT;
+                }
+                else {
+                    connectionStateListener.onDisconnect();
+                    connectState = CONNECT_STATE_DISCONNECT;
+                }
+            }
+        });
 
         tcpClientInboundHandler.setConnectionListener(new TcpClientInboundHandler.ConnectionListener() {
             @Override
             public void onStateChange(ChannelHandlerContext channelContext, int state) {
-                if (connectionStateListener != null){
-                    if (state == TcpClientInboundHandler.STATE_ACTIVE){
-                        connectionStateListener.onConnect(channelContext);
-                        connectState = CONNECT_STATE_CONNECT;
-                    }
-                    else if (state == TcpClientInboundHandler.STATE_INACTIVE){
-                        connectionStateListener.onDisconnect(channelContext);
+                if (connectionStateListener != null) {
+                    if (state == TcpClientInboundHandler.STATE_INACTIVE) {
+                        connectionStateListener.onDisconnect();
                         connectState = CONNECT_STATE_DISCONNECT;
-                    }
-                    else if (state == TcpClientInboundHandler.STATE_TIME_OVER){
-                        connectionStateListener.onHeartBeatTimeOver(channelContext);
-                        connectState = CONNECT_STATE_TIMEOUT;
-                    }
-                    else if (state == TcpClientInboundHandler.STATE_READ_COMPLETE){
+                    } else if (state == TcpClientInboundHandler.STATE_TIME_OVER) {
+                        connectionStateListener.onHeartBeatTimeOver();
+                        connectState = CONNECT_STATE_HEART_BEAT_TIMEOUT;
+                    } else if (state == TcpClientInboundHandler.STATE_READ_COMPLETE) {
                         connectState = CONNECT_STATE_CONNECT;
                     }
                 }
@@ -61,7 +69,7 @@ public class TcpClientExecutor {
                 try {
                     TransmissionModel transmissionModel = new Gson().fromJson(msg, TransmissionModel.class);
 
-                    switch (transmissionModel.transmissionType){
+                    switch (transmissionModel.transmissionType) {
                         case TransmissionModel.TYPE_REQUEST:    //请求
                             requestManager.handleRequest(transmissionModel);
                             break;
@@ -69,19 +77,22 @@ public class TcpClientExecutor {
                             handlePush(transmissionModel);
                             break;
                     }
-                }catch (Exception e){
+                } catch (Exception e) {
 
                 }
             }
         });
+
+        requestManager.startTimeOverCheck();
     }
 
     /**
      * 处理推送
+     *
      * @param transmissionModel
      */
-    private void handlePush(TransmissionModel transmissionModel){
-        if (pushListener != null){
+    private void handlePush(TransmissionModel transmissionModel) {
+        if (pushListener != null) {
             pushListener.onPushMessage(transmissionModel.transmissionContent);
         }
     }
@@ -89,28 +100,30 @@ public class TcpClientExecutor {
     /**
      * 关闭连接
      */
-    public void shutdown(){
+    public void shutdown() {
         channel.close().awaitUninterruptibly();
         requestManager.endTimeOverCheck();
     }
 
     /**
      * 发送消息到服务端
+     *
      * @param msg
      * @param requestCallback
      */
-    public void sendMsg(String msg, RequestManager.RequestCallback requestCallback){
+    public void sendMsg(String msg, RequestManager.RequestCallback requestCallback) {
         sendMsg(msg, requestCallback, 0);
     }
 
     /**
      * 发送消息到服务端
+     *
      * @param msg
      * @param requestCallback
      */
-    public void sendMsg(String msg, RequestManager.RequestCallback requestCallback, int timeOverMilliseconds){
+    public void sendMsg(String msg, RequestManager.RequestCallback requestCallback, int timeOverMilliseconds) {
 
-        if (connectState != CONNECT_STATE_CONNECT){
+        if (connectState != CONNECT_STATE_CONNECT) {
             requestCallback.onError(ErrorModel.newModel(ErrorModel.ERROR_CONNECT_DISCONNECT, "未连接"));
             return;
         }
@@ -126,34 +139,34 @@ public class TcpClientExecutor {
         requestManager.putRequest(transmissionModel, requestCallback);
 //        tcpClient.sendMsg(new Gson().toJson(transmissionModel));
 
-        try {
-            channel.writeAndFlush(new Gson().toJson(transmissionModel)).sync();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        channel.writeAndFlush(new Gson().toJson(transmissionModel));
+
     }
 
     /**
      * 设置推送监听器
+     *
      * @param pushListener
      */
-    public void setPushListener(PushListener pushListener){
+    public void setPushListener(PushListener pushListener) {
         this.pushListener = pushListener;
     }
 
     /**
      * 设置连接状态监听
+     *
      * @param connectionStateListener
      */
-    public void setConnectionStateListener(ConnectionStateListener connectionStateListener){
+    public void setConnectionStateListener(ConnectionStateListener connectionStateListener) {
         this.connectionStateListener = connectionStateListener;
     }
 
     /**
      * 生成唯一标识符
+     *
      * @return
      */
-    public String createIdentification(){
+    public String createIdentification() {
         return Utils.md5(System.currentTimeMillis() + "-" + Math.random());
     }
 
