@@ -139,7 +139,7 @@ public class TcpClientInboundHandler extends SimpleChannelInboundHandler<String>
                 connectionListener.onDataReceived(channelHandlerContext, msg);
             }
         }catch (Exception e){
-
+            e.printStackTrace();
         }
 
     }

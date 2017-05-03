@@ -1,13 +1,9 @@
 package cn.huna.jerry.simplenettylibrary.client;
 
-import com.orhanobut.logger.Logger;
-
 import java.util.concurrent.TimeUnit;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
@@ -55,7 +51,7 @@ public class SimpleNetty {
      * @param port
      * @return
      */
-    public TcpClientExecutor connect(String host, int port, ConnectionStateListener connectionStateListener){
+    public TcpClient connect(String host, int port, ConnectionStateListener connectionStateListener){
 
         final TcpClientInboundHandler tcpClientInboundHandler = new TcpClientInboundHandler();
         bootstrap.handler(new ChannelInitializer<SocketChannel>() {
@@ -77,10 +73,10 @@ public class SimpleNetty {
 
         ChannelFuture channelFuture = bootstrap.connect(host, port);
 
-        TcpClientExecutor tcpClientExecutor = new TcpClientExecutor(channelFuture, tcpClientInboundHandler);
-        tcpClientExecutor.setConnectionStateListener(connectionStateListener);
+        TcpClient tcpClient = new TcpClient(channelFuture, tcpClientInboundHandler);
+        tcpClient.setConnectionStateListener(connectionStateListener);
 
-        return tcpClientExecutor;
+        return tcpClient;
 
     }
 

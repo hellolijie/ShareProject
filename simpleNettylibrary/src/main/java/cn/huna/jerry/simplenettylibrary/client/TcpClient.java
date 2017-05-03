@@ -1,135 +1,186 @@
 package cn.huna.jerry.simplenettylibrary.client;
 
-import com.orhanobut.logger.Logger;
+import com.google.gson.Gson;
 
-import java.util.concurrent.TimeUnit;
-
-import io.netty.bootstrap.Bootstrap;
+import cn.huna.jerry.simplenettylibrary.Utils;
+import cn.huna.jerry.simplenettylibrary.model.ErrorModel;
+import cn.huna.jerry.simplenettylibrary.model.TransmissionModel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
-import io.netty.handler.codec.LengthFieldPrepender;
-import io.netty.handler.codec.string.StringDecoder;
-import io.netty.handler.codec.string.StringEncoder;
-import io.netty.handler.timeout.IdleStateHandler;
-import io.netty.util.CharsetUtil;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
 
 /**
- * Created by lijie on 17/1/25.
+ * Created by lijie on 17/1/26.
  */
 
 public class TcpClient {
-    // 多长时间未请求后，发送心跳
-    private static final int WRITE_WAIT_SECONDS = 5;
+    public static final int CONNECT_STATE_CONNECT = 1;       //连接成功
+    public static final int CONNECT_STATE_DISCONNECT = -1;       //连接断开
+    public static final int CONNECT_STATE_HEART_BEAT_TIMEOUT = -2;     //连接心跳超时
 
+    //    private TcpClient tcpClient;
     private Channel channel;
-    private EventLoopGroup workerGroup;
-    private ChannelHandler channelHandler;
 
-    public TcpClient(ChannelHandler channelHandler){
-        this.channelHandler = channelHandler;
+    private RequestManager requestManager;
+    private TcpClientInboundHandler tcpClientInboundHandler;
+    private PushListener pushListener;
+    private ConnectionStateListener connectionStateListener;
+
+    private int connectState = -1;
+
+    public TcpClient(ChannelFuture channelFuture, TcpClientInboundHandler tcpClientInboundHandler) {
+        requestManager = new RequestManager();
+        this.tcpClientInboundHandler = tcpClientInboundHandler;
+        this.channel = channelFuture.channel();
+
+        initConnectionState();
+
+        channelFuture.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture channelFuture) throws Exception {
+                if (channelFuture.isSuccess()){
+                    connectionStateListener.onConnect();
+                    connectState = CONNECT_STATE_CONNECT;
+                }
+                else {
+                    connectionStateListener.onDisconnect();
+                    connectState = CONNECT_STATE_DISCONNECT;
+                }
+            }
+        });
+
+
+
+        requestManager.startTimeOverCheck();
     }
 
-    /**
-     * 连接
-     * @param host
-     * @param port
-     * @throws InterruptedException
-     */
-    public void connect(final String host, final int port) throws InterruptedException {
-        new Thread(new Runnable() {
+    private void initConnectionState(){
+        tcpClientInboundHandler.setConnectionListener(new TcpClientInboundHandler.ConnectionListener() {
             @Override
-            public void run() {
-                workerGroup = new NioEventLoopGroup();
-                Bootstrap b = new Bootstrap();
-                b.group(workerGroup);
-                b.channel(NioSocketChannel.class);
-//            b.option(ChannelOption.AUTO_READ, false);
-
-                b.handler(new ChannelInitializer<SocketChannel>() {
-                    @Override
-                    public void initChannel(SocketChannel ch) throws Exception {
-                        ChannelPipeline pipeline = ch.pipeline();
-                        pipeline.addLast("frameDecoder", new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4, 0, 4));
-                        pipeline.addLast("frameEncoder", new LengthFieldPrepender(4));
-                        pipeline.addLast("decoder", new StringDecoder(CharsetUtil.UTF_8));
-                        pipeline.addLast("encoder", new StringEncoder(CharsetUtil.UTF_8));
-
-                        pipeline.addLast("ping", new IdleStateHandler(WRITE_WAIT_SECONDS, WRITE_WAIT_SECONDS, WRITE_WAIT_SECONDS, TimeUnit.SECONDS));
-
-                        pipeline.addLast("handler", channelHandler);
+            public void onStateChange(ChannelHandlerContext channelContext, int state) {
+                if (connectionStateListener != null) {
+                    if (state == TcpClientInboundHandler.STATE_INACTIVE) {
+                        connectionStateListener.onDisconnect();
+                        connectState = CONNECT_STATE_DISCONNECT;
+                    } else if (state == TcpClientInboundHandler.STATE_TIME_OVER) {
+                        connectionStateListener.onHeartBeatTimeOver();
+                        connectState = CONNECT_STATE_HEART_BEAT_TIMEOUT;
+                    } else if (state == TcpClientInboundHandler.STATE_READ_COMPLETE) {
+                        connectState = CONNECT_STATE_CONNECT;
                     }
-                });
-                b.option(ChannelOption.SO_KEEPALIVE, true);
-                // Start the client.
+                }
+            }
 
+            @Override
+            public void onDataReceived(ChannelHandlerContext channelContext, String msg) {
                 try {
-                    channel = b.connect(host, port).sync().channel();
-                } catch (InterruptedException e) {
+                    TransmissionModel transmissionModel = new Gson().fromJson(msg, TransmissionModel.class);
+
+                    switch (transmissionModel.transmissionType) {
+                        case TransmissionModel.TYPE_REQUEST:    //请求
+                            requestManager.handleRequest(transmissionModel);
+                            break;
+                        case TransmissionModel.TYPE_PUSH:       //推送
+                            handlePush(transmissionModel);
+                            break;
+                    }
+                } catch (Exception e) {
                     e.printStackTrace();
                 }
-
-
-
             }
-        }).start();
-
+        });
     }
 
     /**
-     * 发送消息 异步
-     * @param msg
+     * 处理推送
+     *
+     * @param transmissionModel
      */
-    public ChannelFuture sendMsg(String msg){
-
-        if(channel != null) {
-            return channel.writeAndFlush(msg);
+    private void handlePush(TransmissionModel transmissionModel) {
+        if (pushListener != null) {
+            pushListener.onPushMessage(transmissionModel.transmissionContent);
         }
-        return null;
     }
 
+    /**
+     * 关闭连接
+     */
+    public void shutdown() {
+        channel.close().awaitUninterruptibly();
+        requestManager.endTimeOverCheck();
+    }
 
     /**
-     * 发送消息 同步
+     * 发送消息到服务端
+     *
      * @param msg
+     * @param requestCallback
+     */
+    public void sendMsg(String msg, RequestManager.RequestCallback requestCallback) {
+        sendMsg(msg, requestCallback, 0);
+    }
+
+    /**
+     * 发送消息到服务端
+     *
+     * @param msg
+     * @param requestCallback
+     */
+    public void sendMsg(String msg, RequestManager.RequestCallback requestCallback, int timeOverMilliseconds) {
+
+        if (connectState != CONNECT_STATE_CONNECT) {
+            requestCallback.onError(ErrorModel.newModel(ErrorModel.ERROR_CONNECT_DISCONNECT, "未连接"));
+            return;
+        }
+
+        TransmissionModel transmissionModel = new TransmissionModel();
+        transmissionModel.transmissionContent = msg;
+        transmissionModel.transmissionType = TransmissionModel.TYPE_REQUEST;
+        transmissionModel.transmissionIdentification = createIdentification();
+
+        requestCallback.requestCreateTime = System.currentTimeMillis();
+        requestCallback.timeOverMilliseconds = timeOverMilliseconds;
+
+        requestManager.putRequest(transmissionModel, requestCallback);
+//        tcpClient.sendMsg(new Gson().toJson(transmissionModel));
+
+        channel.writeAndFlush(new Gson().toJson(transmissionModel));
+
+    }
+
+    /**
+     * 设置推送监听器
+     *
+     * @param pushListener
+     */
+    public void setPushListener(PushListener pushListener) {
+        this.pushListener = pushListener;
+    }
+
+    /**
+     * 设置连接状态监听
+     *
+     * @param connectionStateListener
+     */
+    public void setConnectionStateListener(ConnectionStateListener connectionStateListener) {
+        this.connectionStateListener = connectionStateListener;
+    }
+
+    /**
+     * 生成唯一标识符
+     *
      * @return
      */
-    public ChannelFuture sendMsgSync(String msg){
-
-        ChannelFuture channelFuture = null;
-
-        if(channel != null){
-            try {
-                channelFuture = channel.writeAndFlush(msg).sync();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-
-        return channelFuture;
+    public String createIdentification() {
+        return Utils.md5(System.currentTimeMillis() + "-" + Math.random());
     }
 
     /**
-     * 关闭
+     * 推送监听器
      */
-    public void shutdown(){
-        try {
-            if(channel != null){
-                channel.close().awaitUninterruptibly();
-            }
-            workerGroup.shutdownGracefully();
-            Logger.d("channel close");
-        }catch (Exception e){
-            e.printStackTrace();
-        }
-
+    public interface PushListener {
+        void onPushMessage(String pushContent);
     }
+
 }

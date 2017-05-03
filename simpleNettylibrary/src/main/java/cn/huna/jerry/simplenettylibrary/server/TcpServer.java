@@ -1,86 +1,95 @@
 package cn.huna.jerry.simplenettylibrary.server;
 
-import java.util.concurrent.TimeUnit;
+import com.google.gson.Gson;
 
-import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
-import io.netty.handler.codec.LengthFieldPrepender;
-import io.netty.handler.codec.string.StringDecoder;
-import io.netty.handler.codec.string.StringEncoder;
-import io.netty.handler.timeout.IdleStateHandler;
-import io.netty.util.CharsetUtil;
+import cn.huna.jerry.simplenettylibrary.model.TransmissionModel;
+import io.netty.channel.ChannelHandlerContext;
 
 /**
- * Created by lijie on 17/1/25.
+ * Created by lijie on 17/1/27.
  */
 
 public class TcpServer {
-    // 设置10秒检测chanel是否接受过心跳数据
-    private static final int READ_WAIT_SECONDS = 5;
+    private TcpServerCore tcpServerCore;
 
-    private EventLoopGroup bossGroup;
-    private EventLoopGroup workerGroup;
-    private TcpServerInboundHandler.ConnectionListener connectionListener;
+    private OnHandelReceivedData onHandelReceivedData;
 
-
-    public TcpServer(TcpServerInboundHandler.ConnectionListener connectionListener){
-        bossGroup = new NioEventLoopGroup();
-        workerGroup = new NioEventLoopGroup();
-        this.connectionListener = connectionListener;
-    }
-
-    /**
-     * 启动服务端
-     * 会阻塞
-     */
-    public void run(final int port){
-        new Thread(new Runnable() {
+    public TcpServer(){
+        tcpServerCore = new TcpServerCore(new TcpServerInboundHandler.ConnectionListener() {
             @Override
-            public void run() {
-                ServerBootstrap b = new ServerBootstrap();
-                b.group(bossGroup, workerGroup);
-                b.channel(NioServerSocketChannel.class);
-//                b.option(ChannelOption.SO_BACKLOG, 100);
-//                b.option(ChannelOption.SO_REUSEADDR, true);
-//                b.handler(new LoggingHandler(LogLevel.INFO));
-                b.childHandler(new ChannelInitializer<SocketChannel>() {
-                    @Override
-                    public void initChannel(SocketChannel ch) throws Exception {
-                        ChannelPipeline pipeline = ch.pipeline();
-                        pipeline.addLast("frameDecoder", new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4, 0, 4));
-                        pipeline.addLast("frameEncoder", new LengthFieldPrepender(4));
-                        pipeline.addLast("decoder", new StringDecoder(CharsetUtil.UTF_8));
-                        pipeline.addLast("encoder", new StringEncoder(CharsetUtil.UTF_8));
-                        pipeline.addLast("pong", new IdleStateHandler(READ_WAIT_SECONDS, READ_WAIT_SECONDS, READ_WAIT_SECONDS, TimeUnit.SECONDS));
-                        pipeline.addLast("handler", new TcpServerInboundHandler().setConnectionListener(connectionListener));
+            public void onStateChange(ChannelHandlerContext channelContext, int state) {
+
+            }
+
+            @Override
+            public void onDataReceived(ChannelHandlerContext channelContext, String msg) {
+                try {
+                    Gson gson = new Gson();
+
+                    TransmissionModel transmissionModel = gson.fromJson(msg, TransmissionModel.class);
+                    TransmissionModel backTransmissionModel = null;
+                    backTransmissionModel = new TransmissionModel();
+                    backTransmissionModel.transmissionIdentification = transmissionModel.transmissionIdentification;
+                    backTransmissionModel.transmissionType = TransmissionModel.TYPE_REQUEST;
+                    if (onHandelReceivedData != null){
+                        String backString = onHandelReceivedData.onReceivedData(transmissionModel.transmissionContent);
+                        backTransmissionModel.transmissionContent = backString;
                     }
 
-                });
+                    channelContext.writeAndFlush(gson.toJson(backTransmissionModel));
 
-                try {
-                    b.bind(port).sync().channel().closeFuture().sync();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                finally {
-                    shutdown();
+                }catch (Exception e){
+
                 }
             }
-        }).start();
+        });
 
     }
 
     /**
-     * 关闭
+     * 推送数据
+     * @param handlerContext
+     * @param msg
      */
-    public void shutdown() {
-        workerGroup.shutdownGracefully();
-        bossGroup.shutdownGracefully();
+    public void pushMsg(ChannelHandlerContext handlerContext, String msg){
+        TransmissionModel transmissionModel = new TransmissionModel();
+        transmissionModel.transmissionType = TransmissionModel.TYPE_PUSH;
+        transmissionModel.transmissionContent = msg;
+        handlerContext.writeAndFlush(new Gson().toJson(transmissionModel));
+    }
+
+    /**
+     * 设置数据接收监听器
+     * @param onHandelReceivedData
+     */
+    public void setOnHandelReceivedData(OnHandelReceivedData onHandelReceivedData){
+        this.onHandelReceivedData = onHandelReceivedData;
+    }
+
+    /**
+     * 运行服务端
+     * @param port
+     */
+    public void run(int port){
+        tcpServerCore.run(port);
+    }
+
+    /**
+     * 关闭服务端
+     */
+    public void shutdown(){
+        tcpServerCore.shutdown();
+    }
+
+    /**
+     * 接收到数据回调
+     */
+    public interface OnHandelReceivedData{
+        /**
+         * 处理接收到客户端数据接口
+         * @param msgContent  返回给客户端的数据
+         * @return
+         */
+        String onReceivedData(String msgContent);
     }
 }

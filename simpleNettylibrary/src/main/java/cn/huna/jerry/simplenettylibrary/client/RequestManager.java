@@ -16,7 +16,7 @@ import cn.huna.jerry.simplenettylibrary.model.TransmissionModel;
  */
 
 public class RequestManager {
-    private static final int TIME_OVER_CHECK_DELAY = 3;     //超时轮询时间
+    private static final int TIME_OVER_CHECK_DELAY = 3000;     //超时轮询时间
     private static final int DEFAULT_TIME_OVER_MILLISECOND = 10000;  //默认超时时间
 
     private ScheduledExecutorService timeOverService;
@@ -78,7 +78,7 @@ public class RequestManager {
                     }
                 }
             }
-        }, TIME_OVER_CHECK_DELAY, TIME_OVER_CHECK_DELAY, TimeUnit.SECONDS);
+        }, TIME_OVER_CHECK_DELAY, TIME_OVER_CHECK_DELAY, TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -86,6 +86,11 @@ public class RequestManager {
      */
     public void endTimeOverCheck(){
         timeOverService.shutdownNow();
+        for (Map.Entry<String, RequestCallback> entry : callbackMap.entrySet()){
+            RequestCallback requestCallback = entry.getValue();
+            callbackMap.remove(requestCallback.requestKey);
+            requestCallback.onError(ErrorModel.newModel(ErrorModel.ERROR_CONNECT_DISCONNECT, "连接断开"));
+        }
     }
 
     /**
