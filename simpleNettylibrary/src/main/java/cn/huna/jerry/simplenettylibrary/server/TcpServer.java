@@ -11,7 +11,6 @@ import io.netty.channel.ChannelHandlerContext;
 
 public class TcpServer {
     private TcpServerCore tcpServerCore;
-
     private OnHandelReceivedData onHandelReceivedData;
 
     public TcpServer(){
@@ -39,7 +38,7 @@ public class TcpServer {
                     channelContext.writeAndFlush(gson.toJson(backTransmissionModel));
 
                 }catch (Exception e){
-
+                    e.printStackTrace();
                 }
             }
         });

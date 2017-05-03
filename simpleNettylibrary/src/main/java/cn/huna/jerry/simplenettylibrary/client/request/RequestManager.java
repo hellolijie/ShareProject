@@ -1,13 +1,11 @@
-package cn.huna.jerry.simplenettylibrary.client;
+package cn.huna.jerry.simplenettylibrary.client.request;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import cn.huna.jerry.simplenettylibrary.Utils;
 import cn.huna.jerry.simplenettylibrary.model.ErrorModel;
 import cn.huna.jerry.simplenettylibrary.model.TransmissionModel;
 
@@ -41,7 +39,7 @@ public class RequestManager {
      * @param transmissionModel
      */
     public void handleRequest(TransmissionModel transmissionModel){
-        RequestManager.RequestCallback requestCallback = callbackMap.get(transmissionModel.transmissionIdentification);
+        RequestCallback requestCallback = callbackMap.get(transmissionModel.transmissionIdentification);
         if (requestCallback != null){
             requestCallback.onSuc(transmissionModel.transmissionContent);
         }
@@ -93,15 +91,4 @@ public class RequestManager {
         }
     }
 
-    /**
-     * 请求回调
-     */
-    public static abstract class RequestCallback {
-        public long requestCreateTime;      //请求创建时间
-        public long timeOverMilliseconds;    //超时时间
-        public String requestKey;           //请求唯一标识
-
-        public abstract void onSuc(String msgContent);
-        public abstract void onError(ErrorModel errorModel);
-    }
 }

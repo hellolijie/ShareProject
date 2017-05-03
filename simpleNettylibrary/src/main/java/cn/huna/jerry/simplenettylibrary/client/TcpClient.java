@@ -3,6 +3,8 @@ package cn.huna.jerry.simplenettylibrary.client;
 import com.google.gson.Gson;
 
 import cn.huna.jerry.simplenettylibrary.Utils;
+import cn.huna.jerry.simplenettylibrary.client.request.RequestCallback;
+import cn.huna.jerry.simplenettylibrary.client.request.RequestManager;
 import cn.huna.jerry.simplenettylibrary.model.ErrorModel;
 import cn.huna.jerry.simplenettylibrary.model.TransmissionModel;
 import io.netty.channel.Channel;
@@ -117,7 +119,7 @@ public class TcpClient {
      * @param msg
      * @param requestCallback
      */
-    public void sendMsg(String msg, RequestManager.RequestCallback requestCallback) {
+    public void sendMsg(String msg, RequestCallback requestCallback) {
         sendMsg(msg, requestCallback, 0);
     }
 
@@ -127,7 +129,7 @@ public class TcpClient {
      * @param msg
      * @param requestCallback
      */
-    public void sendMsg(String msg, RequestManager.RequestCallback requestCallback, int timeOverMilliseconds) {
+    public void sendMsg(String msg, RequestCallback requestCallback, int timeOverMilliseconds) {
 
         if (connectState != CONNECT_STATE_CONNECT) {
             requestCallback.onError(ErrorModel.newModel(ErrorModel.ERROR_CONNECT_DISCONNECT, "未连接"));

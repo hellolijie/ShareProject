@@ -86,6 +86,7 @@ public class SimpleNetty {
     public void shutDownAll(){
         try {
             workerGroup.shutdownGracefully();
+            instance = null;
         }catch (Exception e){
             e.printStackTrace();
         }

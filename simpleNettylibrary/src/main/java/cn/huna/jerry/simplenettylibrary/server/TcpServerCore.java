@@ -3,6 +3,7 @@ package cn.huna.jerry.simplenettylibrary.server;
 import java.util.concurrent.TimeUnit;
 
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
@@ -64,7 +65,8 @@ public class TcpServerCore {
                 });
 
                 try {
-                    b.bind(port).sync().channel().closeFuture().sync();
+                    ChannelFuture bindFuture = b.bind(port);
+                    bindFuture.sync().channel().closeFuture().sync();
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
