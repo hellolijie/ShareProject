@@ -12,21 +12,20 @@ import android.widget.Toast;
 import com.example.test.commonlibrary.net.ApiCreator;
 import com.example.test.net.ApiWrapper;
 
-import cn.huna.jerry.simplenettylibrary.client.RequestManager;
-import cn.huna.jerry.simplenettylibrary.client.TcpClientExecutor;
+import cn.huna.jerry.simplenettylibrary.client.ConnectionStateListener;
+import cn.huna.jerry.simplenettylibrary.client.request.RequestCallback;
+import cn.huna.jerry.simplenettylibrary.client.SimpleNetty;
+import cn.huna.jerry.simplenettylibrary.client.TcpClient;
 import cn.huna.jerry.simplenettylibrary.model.ErrorModel;
-import cn.huna.jerry.simplenettylibrary.model.TransmissionModel;
-import cn.huna.jerry.simplenettylibrary.server.TcpServerExecutor;
-import io.netty.channel.ChannelHandlerContext;
+import cn.huna.jerry.simplenettylibrary.server.TcpServer;
 import retrofit2.Response;
-import rx.Scheduler;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.functions.Action1;
 import rx.schedulers.Schedulers;
 
 public class MainActivity extends AppCompatActivity {
-    private TcpServerExecutor tcpServerExecutor;
-    private TcpClientExecutor tcpClientExecutor;
+    private TcpServer tcpServer;
+    private TcpClient tcpClient;
 
 
     @Override
@@ -37,7 +36,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void getIP(View view){
         try {
-            WifiManager wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
+            WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
             WifiInfo wifiInfo = wifiManager.getConnectionInfo();
             int i = wifiInfo.getIpAddress();
 
@@ -52,19 +51,16 @@ public class MainActivity extends AppCompatActivity {
      * @param view
      */
     public void startServer(View view){
-        if (tcpClientExecutor != null){
+        if (tcpClient != null){
             Toast.makeText(this, "已启用服务端", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        if(tcpServerExecutor != null){
-            tcpServerExecutor.shutdown();
+        if(tcpServer != null){
+            tcpServer.shutdown();
         }
-        tcpServerExecutor = new TcpServerExecutor();
-
-        tcpServerExecutor.run(5678);
-
-        tcpServerExecutor.setOnHandelReceivedData(new TcpServerExecutor.OnHandelReceivedData() {
+        tcpServer = new TcpServer();
+        tcpServer.setOnHandelReceivedData(new TcpServer.OnHandelReceivedData() {
             @Override
             public String onReceivedData(String msgContent) {
                 printText(msgContent);
@@ -72,6 +68,8 @@ public class MainActivity extends AppCompatActivity {
                 return "收到数据：" + msgContent;
             }
         });
+
+        tcpServer.run(5678);
     }
 
     /**
@@ -79,37 +77,34 @@ public class MainActivity extends AppCompatActivity {
      * @param view
      */
     public void connectServer(View view){
-        if (tcpServerExecutor != null){
+        if (tcpServer != null){
             Toast.makeText(this, "已启用服务端", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        if (tcpClientExecutor != null){
-            tcpClientExecutor.shutdown();
+        if (tcpClient != null){
+            tcpClient.shutdown();
         }
 
-        tcpClientExecutor = new TcpClientExecutor();
         String ip = ((TextView)findViewById(R.id.et_ip)).getText().toString();
         int port = Integer.parseInt(((TextView)findViewById(R.id.et_port)).getText().toString());
-
-        tcpClientExecutor.setConnectionStateListener(new TcpClientExecutor.ConnectionStateListener() {
+        tcpClient = SimpleNetty.getInstance().connect(ip, port, new ConnectionStateListener() {
             @Override
-            public void onDisconnect(ChannelHandlerContext channelContext) {
+            public void onDisconnect() {
                 printText("断开连接");
             }
 
             @Override
-            public void onConnect(ChannelHandlerContext channelContext) {
+            public void onConnect() {
                 printText("连接成功");
             }
 
             @Override
-            public void onTimeOver(ChannelHandlerContext channelContext) {
+            public void onHeartBeatTimeOver() {
                 printText("超时");
             }
         });
 
-        tcpClientExecutor.connect(ip, port);
     }
 
     /**
@@ -117,11 +112,11 @@ public class MainActivity extends AppCompatActivity {
      * @param view
      */
     public void sendMsg(View view){
-        if (tcpClientExecutor == null)
+        if (tcpClient == null)
             return;
 
         String msg = ((TextView)findViewById(R.id.et_msg)).getText().toString();
-        tcpClientExecutor.sendMsg(msg, new RequestManager.RequestCallback(){
+        tcpClient.sendMsg(msg, new RequestCallback(){
 
             @Override
             public void onSuc(String msgContent) {
@@ -189,10 +184,14 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (tcpClientExecutor != null)
-            tcpClientExecutor.shutdown();
+        if (tcpClient != null)
+            tcpClient.shutdown();
 
-        if (tcpServerExecutor != null)
-            tcpServerExecutor.shutdown();
+        if (tcpServer != null)
+            tcpServer.shutdown();
+
+        SimpleNetty.getInstance().shutDownAll();
+
+//        android.os.Process.killProcess(android.os.Process.myPid());
     }
 }
