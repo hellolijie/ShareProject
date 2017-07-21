@@ -32,9 +32,10 @@ public class TcpClient {
 
     private int connectState = -1;
 
-    public TcpClient(ChannelFuture channelFuture, TcpClientInboundHandler tcpClientInboundHandler) {
+    protected TcpClient(ChannelFuture channelFuture, TcpClientInboundHandler tcpClientInboundHandler, ConnectionStateListener connectionStateListener) {
         requestManager = new RequestManager();
         this.tcpClientInboundHandler = tcpClientInboundHandler;
+        this.connectionStateListener = connectionStateListener;
         this.channel = channelFuture.channel();
 
         initConnectionState();
@@ -43,11 +44,13 @@ public class TcpClient {
             @Override
             public void operationComplete(ChannelFuture channelFuture) throws Exception {
                 if (channelFuture.isSuccess()){
-                    connectionStateListener.onConnect();
+                    if (TcpClient.this.connectionStateListener != null)
+                        TcpClient.this.connectionStateListener.onConnect();
                     connectState = CONNECT_STATE_CONNECT;
                 }
                 else {
-                    connectionStateListener.onDisconnect();
+                    if (TcpClient.this.connectionStateListener != null)
+                        TcpClient.this.connectionStateListener.onDisconnect();
                     connectState = CONNECT_STATE_DISCONNECT;
                 }
             }
@@ -144,7 +147,6 @@ public class TcpClient {
         if (requestCallback != null)
             requestManager.putRequest(transmissionModel, requestCallback);
         channel.writeAndFlush(new Gson().toJson(transmissionModel));
-
     }
 
     /**
@@ -154,24 +156,6 @@ public class TcpClient {
      */
     public void setPushListener(PushListener pushListener) {
         this.pushListener = pushListener;
-    }
-
-    /**
-     * 设置连接状态监听
-     *
-     * @param connectionStateListener
-     */
-    public void setConnectionStateListener(ConnectionStateListener connectionStateListener) {
-        this.connectionStateListener = connectionStateListener;
-    }
-
-    /**
-     * 生成唯一标识符
-     *
-     * @return
-     */
-    public String createIdentification() {
-        return Utils.md5(System.currentTimeMillis() + "-" + Math.random());
     }
 
     /**

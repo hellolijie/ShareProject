@@ -12,7 +12,7 @@ import java.net.UnknownHostException;
  * Created by lijie on 2017/7/17.
  */
 
-public class UdpManager {
+public class UdpUtils {
 
     public static UdpServer createServer(){
         return new UdpServer();

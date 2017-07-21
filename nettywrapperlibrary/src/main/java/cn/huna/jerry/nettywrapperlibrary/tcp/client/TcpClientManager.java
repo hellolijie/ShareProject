@@ -73,8 +73,7 @@ public class TcpClientManager {
 
         ChannelFuture channelFuture = bootstrap.connect(host, port);
 
-        TcpClient tcpClient = new TcpClient(channelFuture, tcpClientInboundHandler);
-        tcpClient.setConnectionStateListener(connectionStateListener);
+        TcpClient tcpClient = new TcpClient(channelFuture, tcpClientInboundHandler, connectionStateListener);
 
         return tcpClient;
 

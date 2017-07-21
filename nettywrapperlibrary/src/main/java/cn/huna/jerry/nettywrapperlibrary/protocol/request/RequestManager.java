@@ -47,6 +47,29 @@ public class RequestManager {
     }
 
     /**
+     * 检查超时
+     */
+    private void checkTimeOut(){
+        for (Map.Entry<String, RequestCallback> entry : callbackMap.entrySet()){
+            RequestCallback requestCallback = entry.getValue();
+            if (requestCallback.timeOverMilliseconds > 0){
+                if (System.currentTimeMillis() > requestCallback.requestCreateTime + requestCallback.timeOverMilliseconds){
+                    //请求设置了超时时间 超时
+                    callbackMap.remove(requestCallback.requestKey);
+                    requestCallback.onError(ErrorModel.newModel(ErrorModel.ERROR_TIME_OUT, "请求超时"));
+                }
+            }
+            else {
+                if (System.currentTimeMillis() > requestCallback.requestCreateTime + DEFAULT_TIME_OVER_MILLISECOND){
+                    //默认超时时间 超时
+                    callbackMap.remove(requestCallback.requestKey);
+                    requestCallback.onError(ErrorModel.newModel(ErrorModel.ERROR_TIME_OUT, "请求超时"));
+                }
+            }
+        }
+    }
+
+    /**
      * 开启超时检查
      */
     public void startTimeOverCheck(){
@@ -57,23 +80,7 @@ public class RequestManager {
         timeOverService.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
-                for (Map.Entry<String, RequestCallback> entry : callbackMap.entrySet()){
-                    RequestCallback requestCallback = entry.getValue();
-                    if (requestCallback.timeOverMilliseconds > 0){
-                        if (System.currentTimeMillis() > requestCallback.requestCreateTime + requestCallback.timeOverMilliseconds){
-                            //请求设置了超时时间 超时
-                            callbackMap.remove(requestCallback.requestKey);
-                            requestCallback.onError(ErrorModel.newModel(ErrorModel.ERROR_TIME_OUT, "请求超时"));
-                        }
-                    }
-                    else {
-                        if (System.currentTimeMillis() > requestCallback.requestCreateTime + DEFAULT_TIME_OVER_MILLISECOND){
-                            //默认超时时间 超时
-                            callbackMap.remove(requestCallback.requestKey);
-                            requestCallback.onError(ErrorModel.newModel(ErrorModel.ERROR_TIME_OUT, "请求超时"));
-                        }
-                    }
-                }
+                checkTimeOut();
             }
         }, TIME_OVER_CHECK_DELAY, TIME_OVER_CHECK_DELAY, TimeUnit.MILLISECONDS);
     }

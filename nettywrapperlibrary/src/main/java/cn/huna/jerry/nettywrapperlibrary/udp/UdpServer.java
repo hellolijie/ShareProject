@@ -4,6 +4,9 @@ import android.text.TextUtils;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledDirectByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
@@ -45,7 +48,7 @@ public class UdpServer {
                         if (!TextUtils.isEmpty(data)){
                             String backData = datagramListener.onReceivedData(data);
                             if (backData != null){
-//                                channelHandlerContext.writeAndFlush(new DatagramPacket(new B, datagramPacket.sender()))
+                                channelHandlerContext.writeAndFlush(new DatagramPacket(Unpooled.copiedBuffer(backData.getBytes()), datagramPacket.sender()));
                             }
                         }
                     }
