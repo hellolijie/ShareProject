@@ -1,1 +1,1 @@
-include ':test', ':simpleNettylibrary', ':commonLibrary', ':LocalDataManagerlibrary', ':atmdemo'
+include ':test', ':simpleNettylibrary', ':commonLibrary', ':LocalDataManagerlibrary', ':atmdemo', ':nettywrapperlibrary', ':codechiplibrary'
