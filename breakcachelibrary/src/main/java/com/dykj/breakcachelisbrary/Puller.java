@@ -4,6 +4,7 @@ import com.dykj.breakcachelisbrary.cache.CacheStorage;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -15,7 +16,10 @@ public class Puller {
 
     private CacheStorage cacheStorage;
     private ScheduledExecutorService pullService;
+    private ScheduledFuture scheduledFuture;
     private Operator operator;
+
+    private int pullPeriod = PULL_PERIOD;
 
     public Puller(CacheStorage cacheStorage, Operator operator){
         this.cacheStorage = cacheStorage;
@@ -23,24 +27,50 @@ public class Puller {
         pullService = Executors.newSingleThreadScheduledExecutor();
     }
 
+    public Puller(CacheStorage cacheStorage, Operator operator, int pullPeriod){
+        this.cacheStorage = cacheStorage;
+        this.operator = operator;
+        pullService = Executors.newSingleThreadScheduledExecutor();
+        this.pullPeriod = pullPeriod;
+    }
+
     /**
      * 开始轮询
      */
     public void startPull(){
-        pullService.shutdownNow();
-
-        pullService.scheduleAtFixedRate(new Runnable() {
-            @Override
-            public void run() {
-                operator.onHandle(cacheStorage.pullData());
+        try {
+            if (scheduledFuture != null) {
+                scheduledFuture.cancel(true);
             }
-        }, PULL_PERIOD, PULL_PERIOD, TimeUnit.MILLISECONDS);
+
+            scheduledFuture = pullService.scheduleAtFixedRate(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        operator.onHandle(cacheStorage.pullData());
+                    }catch (Exception e){
+                        e.printStackTrace();
+                    }
+
+                }
+            }, pullPeriod, pullPeriod, TimeUnit.MILLISECONDS);
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+
     }
 
     /**
      * 结束
      */
     public void stopPull(){
-        pullService.shutdownNow();
+        try {
+            scheduledFuture.cancel(true);
+            pullService.shutdownNow();
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+
     }
+
 }
