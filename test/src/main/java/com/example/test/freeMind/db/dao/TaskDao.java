@@ -1,12 +1,12 @@
-package com.example.test.freeMind.dao;
+package com.example.test.freeMind.db.dao;
 
 import android.content.Context;
 
 import com.activeandroid.query.Select;
 import com.example.test.commonlibrary.utils.CommonUtil;
 import com.example.test.freeMind.GlobalUtils;
-import com.example.test.freeMind.db.MindNodeModel;
-import com.example.test.freeMind.db.TaskModel;
+import com.example.test.freeMind.db.model.MindNodeModel;
+import com.example.test.freeMind.db.model.TaskModel;
 
 import java.util.List;
 
