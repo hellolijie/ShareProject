@@ -22,9 +22,7 @@ public class Puller {
     private int pullPeriod = PULL_PERIOD;
 
     public Puller(CacheStorage cacheStorage, Operator operator){
-        this.cacheStorage = cacheStorage;
-        this.operator = operator;
-        pullService = Executors.newSingleThreadScheduledExecutor();
+        this(cacheStorage, operator, PULL_PERIOD);
     }
 
     public Puller(CacheStorage cacheStorage, Operator operator, int pullPeriod){
