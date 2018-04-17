@@ -1,16 +1,16 @@
-package com.example.test.databasemanagerlibrary;
+package com.example.test.databasemanagerlibrary.ui.database;
 
 import android.content.Context;
 import android.support.v7.widget.RecyclerView;
 import android.view.Gravity;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import com.example.test.databasemanagerlibrary.ui.HorizontalFixLayout;
+
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Created by lijie on 2017/4/19.

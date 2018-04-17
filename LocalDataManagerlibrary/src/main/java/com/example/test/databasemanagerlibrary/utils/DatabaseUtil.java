@@ -1,4 +1,4 @@
-package com.example.test.databasemanagerlibrary;
+package com.example.test.databasemanagerlibrary.utils;
 
 import android.content.ContentValues;
 import android.content.Context;

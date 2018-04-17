@@ -1,4 +1,4 @@
-package com.example.test.databasemanagerlibrary;
+package com.example.test.databasemanagerlibrary.ui.database;
 
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
@@ -10,6 +10,10 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+
+import com.example.test.databasemanagerlibrary.utils.DatabaseUtil;
+import com.example.test.databasemanagerlibrary.R;
+import com.example.test.databasemanagerlibrary.ui.HorizontalFixLayout;
 
 /**
  * Created by lijie on 2017/4/17.

@@ -1,4 +1,4 @@
-package com.example.test.databasemanagerlibrary;
+package com.example.test.databasemanagerlibrary.ui.database;
 
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;

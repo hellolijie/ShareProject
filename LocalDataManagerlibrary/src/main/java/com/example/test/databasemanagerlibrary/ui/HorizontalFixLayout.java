@@ -1,4 +1,4 @@
-package com.example.test.databasemanagerlibrary;
+package com.example.test.databasemanagerlibrary.ui;
 
 import android.content.Context;
 import android.util.AttributeSet;
